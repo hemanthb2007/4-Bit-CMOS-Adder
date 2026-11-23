@@ -1,0 +1,56 @@
+* 4-bit CMOS ripple-carry adder
+* CMOS inverter, NAND, XOR, full-adder, and 4-bit top-level subcircuits
+* Supply: 5 V
+
+.model NMOS NMOS (VTO=0.45 KP=200u GAMMA=0.4 LAMBDA=0.02)
+.model PMOS PMOS (VTO=-0.45 KP=80u GAMMA=0.4 LAMBDA=0.02)
+
+.subckt inverter in out vdd
+M1 out in vdd vdd PMOS W=2u L=0.18u
+M2 out in 0 0 NMOS W=1u L=0.18u
+.ends inverter
+
+.subckt nand2 in1 in2 out vdd
+M1 out in1 vdd vdd PMOS W=2u L=0.18u
+M2 out in2 vdd vdd PMOS W=2u L=0.18u
+M3 out in1 n1 0 NMOS W=2u L=0.18u
+M4 n1 in2 0 0 NMOS W=2u L=0.18u
+.ends nand2
+
+* XOR(a,b) = NAND(NAND(a,b),NAND(a,NAND(a,b)),NAND(NAND(a,b),b))
+.subckt xor2 in1 in2 out vdd
+Xn1 in1 in2 n1 vdd nand2
+Xn2 in1 n1 n2 vdd nand2
+Xn3 n1 in2 n3 vdd nand2
+Xn4 n2 n3 out vdd nand2
+.ends xor2
+
+.subckt full_adder A B Cin Sum Cout vdd
+Xab A B x1 vdd xor2
+Xsum x1 Cin Sum vdd xor2
+
+Xab_nand A B ab vdd nand2
+Xcin_nand x1 Cin cx vdd nand2
+Xcout ab cx Cout vdd nand2
+.ends full_adder
+
+VDD vdd 0 5
+VA0 A0 0 PULSE(0 5 0 10n 10n 2u 4u)
+VA1 A1 0 PULSE(0 5 0 10n 10n 4u 8u)
+VA2 A2 0 PULSE(0 5 0 10n 10n 8u 16u)
+VA3 A3 0 PULSE(0 5 0 10n 10n 16u 32u)
+VB0 B0 0 PULSE(0 5 0 10n 10n 4u 8u)
+VB1 B1 0 PULSE(0 5 0 10n 10n 8u 16u)
+VB2 B2 0 PULSE(0 5 0 10n 10n 16u 32u)
+VB3 B3 0 PULSE(0 5 0 10n 10n 32u 64u)
+VCin Cin 0 0
+
+XFA0 A0 B0 Cin S0 C1 vdd full_adder
+XFA1 A1 B1 C1 S1 C2 vdd full_adder
+XFA2 A2 B2 C2 S2 C3 vdd full_adder
+XFA3 A3 B3 C3 S3 Cout vdd full_adder
+
+.tran 64u
+.options plotwinsize=0
+.backanno
+.end
